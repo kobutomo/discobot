@@ -71,9 +71,13 @@ func generateMessegaCreate(vas *valapiservice.ValAPIService) func(s *discordgo.S
 
 			if len(slice) == 2 {
 				puuid := vas.GetPuuid(slice[1], slice[0][1:])
-				s.ChannelMessageSend(m.ChannelID, puuid)
+				if puuid == "" {
+					s.ChannelMessageSend(m.ChannelID, "User dose not exist.")
+				} else {
+					s.ChannelMessageSend(m.ChannelID, puuid)
+				}
 			} else {
-				s.ChannelMessageSend(m.ChannelID, "invalid format.")
+				s.ChannelMessageSend(m.ChannelID, "Invalid format.")
 			}
 		}
 	}

@@ -63,7 +63,7 @@ func (vas *ValAPIService) doRequest(method, urlPath string, query map[string]str
 	}
 
 	endpoint := baseURL.ResolveReference(apiURL).String()
-	log.Printf("action=doRequest endpoint=%s", endpoint)
+	log.Printf("action=doRequest endpoint=%s\n", endpoint)
 
 	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(data))
 	if err != nil {
@@ -82,13 +82,14 @@ func (vas *ValAPIService) doRequest(method, urlPath string, query map[string]str
 
 	resp, err := vas.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		log.Printf("Cannot connect Riot API, endpoint=%s\n", endpoint)
+		return
 	}
 	defer resp.Body.Close()
 
 	newBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	return newBody, nil
@@ -98,14 +99,11 @@ func (vas *ValAPIService) doRequest(method, urlPath string, query map[string]str
 func (vas *ValAPIService) GetPuuid(tagLine, name string) string {
 	pathURL := fmt.Sprintf("/riot/account/v1/accounts/by-riot-id/%s/%s", name, tagLine)
 	res, err := vas.doRequest("GET", pathURL, map[string]string{}, []byte{})
-	if err != nil {
-		return fmt.Sprintf("Cannot get user %s#%s.", name, tagLine)
-	}
 
 	acount := &account{}
 	err = json.Unmarshal(res, acount)
 	if err != nil {
-		return "User not exist."
+		return "User does not exist."
 	}
 	return acount.Puuid
 }
