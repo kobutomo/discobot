@@ -65,15 +65,15 @@ func generateMessegaCreate(vas *valapiservice.ValAPIService) func(s *discordgo.S
 			return
 		}
 
-		// !Helloというチャットがきたら　「Hello」　と返します
+		// 先頭文字が!かつ名前#タグになっている e.g. トモコロ#3804
 		if string(m.Content[0]) == "!" {
 			slice := strings.Split(m.Content, "#")
 
 			if len(slice) == 2 {
-				puuid, _ := vas.GetPuuid(slice[1], slice[0][1:])
+				puuid := vas.GetPuuid(slice[1], slice[0][1:])
 				s.ChannelMessageSend(m.ChannelID, puuid)
 			} else {
-				s.ChannelMessageSend(m.ChannelID, "invalid format")
+				s.ChannelMessageSend(m.ChannelID, "invalid format.")
 			}
 		}
 	}
