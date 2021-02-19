@@ -25,4 +25,4 @@ jobs:
         run: rsync -acvz --delete -e "ssh -i key -o StrictHostKeyChecking=no" $GITHUB_WORKSPACE/bin/ ubuntu@54.238.207.235:/home/ubuntu/bin/
 
       - name: service restart
-        run: ssh -o StrictHostKeyChecking=no ubuntu@54.238.207.235 -i key "systemctl restart discobot"
+        run: ssh -o StrictHostKeyChecking=no ubuntu@54.238.207.235 -i key "sudo systemctl restart discobot"
