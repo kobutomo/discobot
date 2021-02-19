@@ -31,6 +31,7 @@ func main() {
 	Token := os.Getenv("DISCORD_TOKEN")
 	log.Println("Token: ", Token)
 	if Token == "" {
+		log.Fatalln("No env")
 		return
 	}
 
@@ -49,6 +50,8 @@ func main() {
 		log.Fatalln("Cannot connect,", err)
 		return
 	}
+
+	log.Println("Connected.")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
