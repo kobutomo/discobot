@@ -21,19 +21,18 @@ var ngWords = [...]string{
 }
 
 func main() {
-	/*local only code */
 	println(os.Getenv("GO_ENV"))
 	err := godotenv.Load(fmt.Sprintf("./%s.env", os.Getenv("GO_ENV")))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	Token := os.Getenv("DISCORD_TOKEN")
-	log.Println("Token: ", Token)
 	if Token == "" {
-		log.Fatalln("No env")
+		log.Fatalln("No env.")
 		return
 	}
+	log.Println("Token: ", Token)
 
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
