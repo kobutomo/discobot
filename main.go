@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -15,10 +16,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var ngWords = [...]string{
-	"戌神ころね", "リゼ・ヘルエスタ", "Vtuber", "VTuber", "vtuber", "バーチャルユーチューバー",
-	"バーチャルYouTuber", "笹木咲", "戌亥とこ",
-}
+var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtuber,バーチャルユーチューバー,バーチャルYouTuber,笹木咲,戌亥とこ"
+var ngWords []string
+var adminID string
 
 func main() {
 	println(os.Getenv("GO_ENV"))
@@ -28,11 +28,26 @@ func main() {
 	}
 
 	Token := os.Getenv("DISCORD_TOKEN")
-	if Token == "" {
-		log.Fatalln("No env.")
+	adminID = os.Getenv("ADMIN_ID")
+	if Token == "" || adminID == "" {
+		log.Fatalln("No require env.")
 		return
 	}
 	log.Println("Token: ", Token)
+
+	_, err = os.Stat("./data.txt")
+	if err != nil {
+		os.Create("./data.txt")
+		ioutil.WriteFile("./data.txt", []byte(initialNGWords), os.FileMode(666))
+	}
+
+	bytes, err := ioutil.ReadFile("./data.txt")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println(string(bytes))
+	ngWords = strings.Split(string(bytes), ",")
 
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
@@ -70,6 +85,21 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 			return
 		}
 
+		ngReg, _ := regexp.Compile("^!ng ")
+		rmngReg, _ := regexp.Compile("^!rmng ")
+		showReg, _ := regexp.Compile("^!showng")
+
+		if showReg.MatchString(m.Content) {
+			str := ""
+			for i, w := range ngWords {
+				if i != 0 {
+					str += ", "
+				}
+				str += w
+			}
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n`%s`\nです", str))
+		}
+
 		if strings.Contains(m.Content, "youtube.com") {
 			html, err := getHTMLStr(m.Content)
 			if err != nil {
@@ -80,7 +110,67 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
+
+		if m.Author.ID != adminID {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
+		}
+
+		if ngReg.MatchString(m.Content) {
+			var str string
+			add := ""
+			fmt.Sscanf(m.Content, "!ng %s %s", &str, &add)
+			if strings.Contains(str, ",") || add != "" {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
+				return
+			}
+			if containNG(str) {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️既に追加されているNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
+				return
+			}
+			err := addNG(str)
+			if err != nil {
+				log.Fatal(err)
+			}
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードに追加しました", str))
+			err = loadNG()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if rmngReg.MatchString(m.Content) {
+			var str string
+			add := ""
+			fmt.Sscanf(m.Content, "!rmng %s %s", &str, &add)
+			if strings.Contains(str, ",") || add != "" {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
+				return
+			}
+			if !containNG(str) {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️存在しないNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
+				return
+			}
+			err := removeNG(str)
+			if err != nil {
+				log.Fatal(err)
+			}
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードから削除しました", str))
+			err = loadNG()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	}
+}
+
+func containNG(word string) bool {
+	for _, w := range ngWords {
+		if w == word {
+			return true
+		}
+	}
+	return false
 }
 
 func getHTMLStr(url string) (string, error) {
@@ -102,4 +192,36 @@ func containsNGWords(str string) bool {
 		}
 	}
 	return false
+}
+
+func addNG(str string) error {
+	f, err := os.OpenFile("./data.txt", os.O_APPEND|os.O_WRONLY, 0600)
+	defer f.Close()
+
+	fmt.Fprint(f, ","+str)
+	return err
+}
+
+func removeNG(word string) error {
+	result := []string{}
+	str := ""
+	for _, v := range ngWords {
+		if v != word {
+			result = append(result, v)
+		}
+	}
+	for i, w := range result {
+		if i != 0 {
+			str += ","
+		}
+		str += w
+	}
+	err := ioutil.WriteFile("./data.txt", []byte(str), os.FileMode(666))
+	return err
+}
+
+func loadNG() error {
+	bytes, err := ioutil.ReadFile("./data.txt")
+	ngWords = strings.Split(string(bytes), ",")
+	return err
 }
