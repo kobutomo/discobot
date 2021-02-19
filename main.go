@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -10,18 +13,22 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
-	"github.com/kobutomo/go-kobayashi-watcher/valapiservice"
 )
+
+var ngWords = [...]string{
+	"戌神ころね", "リゼ・ヘルエスタ", "Vtuber", "VTuber", "vtuber", "バーチャルユーチューバー",
+	"バーチャルYouTuber", "笹木咲", "戌亥とこ",
+}
 
 func main() {
 	/*local only code */
+	println(os.Getenv("GO_ENV"))
 	err := godotenv.Load(fmt.Sprintf("./%s.env", os.Getenv("GO_ENV")))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	Token := os.Getenv("DISCORD_TOKEN")
-	APIKey := os.Getenv("API_KEY")
 	log.Println("Token: ", Token)
 	if Token == "" {
 		return
@@ -33,12 +40,8 @@ func main() {
 		return
 	}
 
-	vas := valapiservice.NewValAPIService(APIKey, "https://asia.api.riotgames.com/")
-
 	dg.AddHandler(ready)
-
-	dg.AddHandler(generateMessegaCreate(vas))
-
+	dg.AddHandler(generateMessegaCreate())
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
@@ -55,30 +58,46 @@ func main() {
 }
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
-	s.UpdateStatus(0, "READY TO FIRE")
+	s.UpdateStatus(0, "MAKE CHINA GREAT")
 }
 
-func generateMessegaCreate(vas *valapiservice.ValAPIService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
 
-		// 先頭文字が!かつ名前#タグになっている e.g. トモコロ#3804
-		if string(m.Content[0]) == "!" {
-			slice := strings.Split(m.Content, "#")
-
-			if len(slice) == 2 {
-				puuid := vas.GetPuuid(slice[1], slice[0][1:])
-				if puuid == "" {
-					s.ChannelMessageSend(m.ChannelID, "User does not exist.")
-				} else {
-					s.ChannelMessageSend(m.ChannelID, puuid)
-				}
-			} else {
-				s.ChannelMessageSend(m.ChannelID, "Invalid format.")
+		if strings.Contains(m.Content, "youtube.com") {
+			html, err := getHTMLStr(m.Content)
+			if err != nil {
+				return
+			}
+			if containsNGWords(html) {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
 	}
+}
+
+func getHTMLStr(url string) (string, error) {
+	res, err := http.Get(url)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	buf := bytes.NewBuffer(body)
+	html := buf.String()
+	return html, nil
+}
+
+func containsNGWords(str string) bool {
+	for _, ng := range ngWords {
+		if strings.Contains(str, ng) {
+			return true
+		}
+	}
+	return false
 }

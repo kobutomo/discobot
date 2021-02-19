@@ -1,0 +1,28 @@
+name: deploy lightsail
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@master
+
+      - name: setup node
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+      - run: go build ./bin/discobot
+
+      - name: ssh key generate
+        run: echo "$SSH_KEY" > key && chmod 600 key
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+
+      - name: rsync deploy
+        run: rsync -acvz --delete -e "ssh -i key -o StrictHostKeyChecking=no" $GITHUB_WORKSPACE/bin/ ubuntu@172.26.5.241:/home/ubuntu/bin/
+
+      - name: service restart
+        run: ssh -o StrictHostKeyChecking=no ubuntu@172.26.5.241 -i key "systemctl restart discobot"
