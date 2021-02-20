@@ -20,6 +20,7 @@ var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtu
 var ngWords []string
 var adminID string
 var mainChannelID string
+var first = true
 
 func main() {
 	println(os.Getenv("GO_ENV"))
@@ -57,7 +58,6 @@ func main() {
 		return
 	}
 
-	first := true
 	if first {
 		dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
 		first = false
