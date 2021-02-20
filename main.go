@@ -57,6 +57,12 @@ func main() {
 		return
 	}
 
+	first := true
+	if first {
+		dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
+		first = false
+	}
+
 	dg.AddHandler(ready)
 	dg.AddHandler(generateMessegaCreate())
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
@@ -66,8 +72,6 @@ func main() {
 		log.Fatalln("Cannot connect,", err)
 		return
 	}
-
-	dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
