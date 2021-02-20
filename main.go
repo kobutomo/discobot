@@ -102,7 +102,7 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n`%s`\nです", str))
 		}
 
-		if strings.Contains(m.Content, "youtube.com") {
+		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
 			html, err := getHTMLStr(m.Content)
 			if err != nil {
 				log.Println(err)
