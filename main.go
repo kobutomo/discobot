@@ -19,6 +19,7 @@ import (
 var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtuber,バーチャルユーチューバー,バーチャルYouTuber,笹木咲,戌亥とこ"
 var ngWords []string
 var adminID string
+var mainChannelID string
 
 func main() {
 	println(os.Getenv("GO_ENV"))
@@ -29,7 +30,8 @@ func main() {
 
 	Token := os.Getenv("DISCORD_TOKEN")
 	adminID = os.Getenv("ADMIN_ID")
-	if Token == "" || adminID == "" {
+	mainChannelID = os.Getenv("MAIN_CHANNEL_ID")
+	if Token == "" || adminID == "" || mainChannelID == "" {
 		log.Fatalln("No require env.")
 		return
 	}
@@ -65,7 +67,7 @@ func main() {
 		return
 	}
 
-	log.Println("Connected.")
+	dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -111,12 +113,11 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 			}
 		}
 
-		if m.Author.ID != adminID {
-			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
-			return
-		}
-
 		if ngReg.MatchString(m.Content) {
+			if m.Author.ID != adminID {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+				return
+			}
 			var str string
 			add := ""
 			fmt.Sscanf(m.Content, "!ng %s %s", &str, &add)
@@ -140,6 +141,10 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 		}
 
 		if rmngReg.MatchString(m.Content) {
+			if m.Author.ID != adminID {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+				return
+			}
 			var str string
 			add := ""
 			fmt.Sscanf(m.Content, "!rmng %s %s", &str, &add)
