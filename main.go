@@ -20,7 +20,6 @@ var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtu
 var ngWords []string
 var adminID string
 var mainChannelID string
-var first = true
 
 func main() {
 	println(os.Getenv("GO_ENV"))
@@ -58,10 +57,7 @@ func main() {
 		return
 	}
 
-	if first {
-		dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
-		first = false
-	}
+	dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
 
 	dg.AddHandler(ready)
 	dg.AddHandler(generateMessegaCreate())
@@ -109,6 +105,7 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 		if strings.Contains(m.Content, "youtube.com") {
 			html, err := getHTMLStr(m.Content)
 			if err != nil {
+				log.Println(err)
 				return
 			}
 			if containsNGWords(html) {
@@ -184,6 +181,9 @@ func containNG(word string) bool {
 
 func getHTMLStr(url string) (string, error) {
 	res, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return "", err
