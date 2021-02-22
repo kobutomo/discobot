@@ -41,6 +41,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	defer dbService.Close()
 	err = dbService.Init()
 	if err != nil {
 		log.Fatalln(err.Error())

@@ -100,3 +100,8 @@ func (dbService *DbService) FindByWord(word string) (string, error) {
 	err := row.Scan(&result)
 	return result, err
 }
+
+// Close - セッションを閉じる
+func (dbService *DbService) Close() error {
+	return dbService.db.Close()
+}
