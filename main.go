@@ -76,6 +76,7 @@ func main() {
 }
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
+	s.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
 	s.UpdateStatus(0, "MAKE CHINA GREAT")
 }
 
