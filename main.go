@@ -99,7 +99,7 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				}
 				str += w
 			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n`%s`\nです", str))
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n```\n%s\n```です", str))
 		}
 
 		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
