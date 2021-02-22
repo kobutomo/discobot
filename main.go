@@ -37,7 +37,7 @@ func main() {
 		return
 	}
 
-	dbService, err := dbservice.NewDbService("./ngwords.sql")
+	dbService, err := dbservice.New("./ngwords.sql")
 	if err != nil {
 		log.Fatalln(err)
 	}

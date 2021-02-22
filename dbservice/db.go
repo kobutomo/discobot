@@ -2,17 +2,19 @@ package dbservice
 
 import (
 	"database/sql"
-
+	// Sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var initialNGWords = []string{"戌神ころね", "リゼ・ヘルエスタ", "Vtuber", "VTuber", "vtuber", "バーチャルユーチューバー", "バーチャルYouTuber", "笹木咲", "戌亥とこ"}
 
+// DbService - DBに関する操作をする
 type DbService struct {
 	db *sql.DB
 }
 
-func NewDbService(path string) (*DbService, error) {
+// New - コンストラクタ
+func New(path string) (*DbService, error) {
 	dbService := &DbService{}
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -22,6 +24,7 @@ func NewDbService(path string) (*DbService, error) {
 	return dbService, nil
 }
 
+// Init - DB を初期化する
 func (dbService *DbService) Init() error {
 	_, err := dbService.db.Exec(
 		`CREATE TABLE IF NOT EXISTS ng_words (
@@ -47,6 +50,7 @@ func (dbService *DbService) Init() error {
 	return nil
 }
 
+// InsertNg - NG ワードを追加する
 func (dbService *DbService) InsertNg(word string) (int64, error) {
 	res, err := dbService.db.Exec(
 		`INSERT INTO ng_words (word) VALUES (?)`,
@@ -59,6 +63,7 @@ func (dbService *DbService) InsertNg(word string) (int64, error) {
 	return id, err
 }
 
+// SelectAllNgs - 現在登録されている NG ワードを表示する
 func (dbService *DbService) SelectAllNgs() ([]string, error) {
 	var words []string
 	var word string
@@ -76,6 +81,7 @@ func (dbService *DbService) SelectAllNgs() ([]string, error) {
 	return words, nil
 }
 
+// DeleteNg - NG ワードを削除する
 func (dbService *DbService) DeleteNg(word string) error {
 	_, err := dbService.db.Exec(
 		`DELETE FROM ng_words WHERE word = ?`,
@@ -84,6 +90,7 @@ func (dbService *DbService) DeleteNg(word string) error {
 	return err
 }
 
+// FindByWord - ワードが登録されているかどうかを調べる
 func (dbService *DbService) FindByWord(word string) (string, error) {
 	result := ""
 	row := dbService.db.QueryRow(
