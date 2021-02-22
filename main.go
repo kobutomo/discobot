@@ -32,10 +32,9 @@ func main() {
 	adminID = os.Getenv("ADMIN_ID")
 	mainChannelID = os.Getenv("MAIN_CHANNEL_ID")
 	if Token == "" || adminID == "" || mainChannelID == "" {
-		log.Fatalln("No require env.")
+		log.Fatalln("No required env.")
 		return
 	}
-	log.Println("Token:", Token)
 
 	_, err = os.Stat("./data.txt")
 	if err != nil {
