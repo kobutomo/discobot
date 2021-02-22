@@ -40,7 +40,7 @@ func main() {
 	_, err = os.Stat("./data.txt")
 	if err != nil {
 		os.Create("./data.txt")
-		ioutil.WriteFile("./data.txt", []byte(initialNGWords), os.FileMode(666))
+		ioutil.WriteFile("./data.txt", []byte(initialNGWords), 0666)
 	}
 
 	bytes, err := ioutil.ReadFile("./data.txt")
@@ -225,7 +225,7 @@ func removeNG(word string) error {
 		}
 		str += w
 	}
-	err := ioutil.WriteFile("./data.txt", []byte(str), os.FileMode(666))
+	err := ioutil.WriteFile("./data.txt", []byte(str), 0666)
 	return err
 }
 
