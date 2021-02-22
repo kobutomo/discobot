@@ -35,7 +35,7 @@ func main() {
 		log.Fatalln("No require env.")
 		return
 	}
-	log.Println("Token: ", Token)
+	log.Println("Token:", Token)
 
 	_, err = os.Stat("./data.txt")
 	if err != nil {
@@ -109,7 +109,7 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				return
 			}
 			if containsNGWords(html) {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+" ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
