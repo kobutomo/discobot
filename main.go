@@ -14,6 +14,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	"github.com/kobutomo/discobot/dbservice"
 )
 
 var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtuber,バーチャルユーチューバー,バーチャルYouTuber,笹木咲,戌亥とこ"
@@ -32,24 +33,18 @@ func main() {
 	adminID = os.Getenv("ADMIN_ID")
 	mainChannelID = os.Getenv("MAIN_CHANNEL_ID")
 	if Token == "" || adminID == "" || mainChannelID == "" {
-		log.Fatalln("No require env.")
+		log.Fatalln("No required env.")
 		return
 	}
-	log.Println("Token: ", Token)
 
-	_, err = os.Stat("./data.txt")
-	if err != nil {
-		os.Create("./data.txt")
-		ioutil.WriteFile("./data.txt", []byte(initialNGWords), os.FileMode(666))
-	}
-
-	bytes, err := ioutil.ReadFile("./data.txt")
+	dbService, err := dbservice.New("./ngwords.sql")
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	log.Println(string(bytes))
-	ngWords = strings.Split(string(bytes), ",")
+	err = dbService.Init()
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
 
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
@@ -57,10 +52,8 @@ func main() {
 		return
 	}
 
-	dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
-
 	dg.AddHandler(ready)
-	dg.AddHandler(generateMessegaCreate())
+	dg.AddHandler(generateMessegaCreate(dbService))
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
@@ -77,12 +70,13 @@ func main() {
 }
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
+	log.Println("習近平 starts to inspect.")
+	s.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
 	s.UpdateStatus(0, "MAKE CHINA GREAT")
 }
 
-func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
-
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
@@ -92,6 +86,10 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 		showReg, _ := regexp.Compile("^!showng")
 
 		if showReg.MatchString(m.Content) {
+			ngWords, err := dbService.SelectAllNgs()
+			if err != nil {
+				log.Fatalln(err)
+			}
 			str := ""
 			for i, w := range ngWords {
 				if i != 0 {
@@ -99,7 +97,7 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				}
 				str += w
 			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n`%s`\nです", str))
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n```\n%s\n```です", str))
 		}
 
 		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
@@ -108,8 +106,8 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				log.Println(err)
 				return
 			}
-			if containsNGWords(html) {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
+			if containsNGWords(dbService, html) {
+				s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+" ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
@@ -126,19 +124,12 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
 				return
 			}
-			if containNG(str) {
+			if alreadyAddedNG(dbService, str) {
 				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️既に追加されているNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
 				return
 			}
-			err := addNG(str)
-			if err != nil {
-				log.Fatal(err)
-			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードに追加しました", str))
-			err = loadNG()
-			if err != nil {
-				log.Fatal(err)
-			}
+			addNG(dbService, str)
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("`%s` をNGワードに追加しました", str))
 		}
 
 		if rmngReg.MatchString(m.Content) {
@@ -153,26 +144,23 @@ func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCrea
 				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
 				return
 			}
-			if !containNG(str) {
+			if !alreadyAddedNG(dbService, str) {
 				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️存在しないNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
 				return
 			}
-			err := removeNG(str)
-			if err != nil {
-				log.Fatal(err)
-			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードから削除しました", str))
-			err = loadNG()
-			if err != nil {
-				log.Fatal(err)
-			}
+			removeNG(dbService, str)
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("`%s` をNGワードから削除しました", str))
 		}
 	}
 }
 
-func containNG(word string) bool {
-	for _, w := range ngWords {
-		if w == word {
+func alreadyAddedNG(dbService *dbservice.DbService, str string) bool {
+	res, err := dbService.SelectAllNgs()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, word := range res {
+		if str == word {
 			return true
 		}
 	}
@@ -194,43 +182,29 @@ func getHTMLStr(url string) (string, error) {
 	return html, nil
 }
 
-func containsNGWords(str string) bool {
-	for _, ng := range ngWords {
-		if strings.Contains(str, ng) {
+func containsNGWords(dbService *dbservice.DbService, str string) bool {
+	res, err := dbService.SelectAllNgs()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	for _, word := range res {
+		if strings.Contains(str, word) {
 			return true
 		}
 	}
 	return false
 }
 
-func addNG(str string) error {
-	f, err := os.OpenFile("./data.txt", os.O_APPEND|os.O_WRONLY, 0600)
-	defer f.Close()
-
-	fmt.Fprint(f, ","+str)
-	return err
+func addNG(dbService *dbservice.DbService, word string) {
+	_, err := dbService.InsertNg(word)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
 
-func removeNG(word string) error {
-	result := []string{}
-	str := ""
-	for _, v := range ngWords {
-		if v != word {
-			result = append(result, v)
-		}
+func removeNG(dbService *dbservice.DbService, word string) {
+	err := dbService.DeleteNg(word)
+	if err != nil {
+		log.Fatalln(err)
 	}
-	for i, w := range result {
-		if i != 0 {
-			str += ","
-		}
-		str += w
-	}
-	err := ioutil.WriteFile("./data.txt", []byte(str), os.FileMode(666))
-	return err
-}
-
-func loadNG() error {
-	bytes, err := ioutil.ReadFile("./data.txt")
-	ngWords = strings.Split(string(bytes), ",")
-	return err
 }
