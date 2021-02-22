@@ -56,10 +56,8 @@ func main() {
 		return
 	}
 
-	dg.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
-
 	dg.AddHandler(ready)
-	dg.AddHandler(generateMessegaCreate())
+	dg.AddHandler(generateMessegaCreate)
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
@@ -80,92 +78,89 @@ func ready(s *discordgo.Session, event *discordgo.Ready) {
 	s.UpdateStatus(0, "MAKE CHINA GREAT")
 }
 
-func generateMessegaCreate() func(s *discordgo.Session, m *discordgo.MessageCreate) {
-	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func generateMessegaCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author.ID == s.State.User.ID {
+		return
+	}
 
-		if m.Author.ID == s.State.User.ID {
+	ngReg, _ := regexp.Compile("^!ng ")
+	rmngReg, _ := regexp.Compile("^!rmng ")
+	showReg, _ := regexp.Compile("^!showng")
+
+	if showReg.MatchString(m.Content) {
+		str := ""
+		for i, w := range ngWords {
+			if i != 0 {
+				str += ", "
+			}
+			str += w
+		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n```\n%s\n```です", str))
+	}
+
+	if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
+		html, err := getHTMLStr(m.Content)
+		if err != nil {
+			log.Println(err)
 			return
 		}
-
-		ngReg, _ := regexp.Compile("^!ng ")
-		rmngReg, _ := regexp.Compile("^!rmng ")
-		showReg, _ := regexp.Compile("^!showng")
-
-		if showReg.MatchString(m.Content) {
-			str := ""
-			for i, w := range ngWords {
-				if i != 0 {
-					str += ", "
-				}
-				str += w
-			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n```\n%s\n```です", str))
+		if containsNGWords(html) {
+			s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+" ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
+			s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 		}
+	}
 
-		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
-			html, err := getHTMLStr(m.Content)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			if containsNGWords(html) {
-				s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+" ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
-				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
-			}
+	if ngReg.MatchString(m.Content) {
+		if m.Author.ID != adminID {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
 		}
-
-		if ngReg.MatchString(m.Content) {
-			if m.Author.ID != adminID {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
-				return
-			}
-			var str string
-			add := ""
-			fmt.Sscanf(m.Content, "!ng %s %s", &str, &add)
-			if strings.Contains(str, ",") || add != "" {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
-				return
-			}
-			if containNG(str) {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️既に追加されているNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
-				return
-			}
-			err := addNG(str)
-			if err != nil {
-				log.Fatal(err)
-			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードに追加しました", str))
-			err = loadNG()
-			if err != nil {
-				log.Fatal(err)
-			}
+		var str string
+		add := ""
+		fmt.Sscanf(m.Content, "!ng %s %s", &str, &add)
+		if strings.Contains(str, ",") || add != "" {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
 		}
+		if containNG(str) {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️既に追加されているNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
+		}
+		err := addNG(str)
+		if err != nil {
+			log.Fatal(err)
+		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードに追加しました", str))
+		err = loadNG()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
-		if rmngReg.MatchString(m.Content) {
-			if m.Author.ID != adminID {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
-				return
-			}
-			var str string
-			add := ""
-			fmt.Sscanf(m.Content, "!rmng %s %s", &str, &add)
-			if strings.Contains(str, ",") || add != "" {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
-				return
-			}
-			if !containNG(str) {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️存在しないNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
-				return
-			}
-			err := removeNG(str)
-			if err != nil {
-				log.Fatal(err)
-			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードから削除しました", str))
-			err = loadNG()
-			if err != nil {
-				log.Fatal(err)
-			}
+	if rmngReg.MatchString(m.Content) {
+		if m.Author.ID != adminID {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
+		}
+		var str string
+		add := ""
+		fmt.Sscanf(m.Content, "!rmng %s %s", &str, &add)
+		if strings.Contains(str, ",") || add != "" {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
+		}
+		if !containNG(str) {
+			s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️存在しないNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
+			return
+		}
+		err := removeNG(str)
+		if err != nil {
+			log.Fatal(err)
+		}
+		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s をNGワードから削除しました", str))
+		err = loadNG()
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }
