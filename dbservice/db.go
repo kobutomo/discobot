@@ -94,7 +94,7 @@ func (dbService *DbService) DeleteNg(word string) error {
 func (dbService *DbService) FindByWord(word string) (string, error) {
 	result := ""
 	row := dbService.db.QueryRow(
-		`DELETE FROM ng_words WHERE word = ?`,
+		`SELECT word FROM ng_words WHERE word = ?`,
 		word,
 	)
 	err := row.Scan(&result)

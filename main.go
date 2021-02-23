@@ -156,16 +156,11 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 }
 
 func alreadyAddedNG(dbService *dbservice.DbService, str string) bool {
-	res, err := dbService.SelectAllNgs()
+	res, err := dbService.FindByWord(str)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err)
 	}
-	for _, word := range res {
-		if str == word {
-			return true
-		}
-	}
-	return false
+	return res != ""
 }
 
 func getHTMLStr(url string) (string, error) {
