@@ -73,7 +73,7 @@ func main() {
 
 func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *discordgo.Ready) {
 	return func(s *discordgo.Session, event *discordgo.Ready) {
-		log.Println("習近平 starts to inspect." + version)
+		log.Println("習近平 starts to inspect. v" + version)
 		versions := dbService.SelectAllVersions()
 		isNew := true
 		for _, v := range versions {
