@@ -83,7 +83,7 @@ func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *dis
 		}
 		if isNew {
 			s.ChannelMessageSend(mainChannelID, fmt.Sprintf("習近平 `v%s` がリリースされました🇨🇳", version))
-			// dbService.InsertNewVersion(version)
+			dbService.InsertNewVersion(version)
 		}
 		s.UpdateStatus(0, "MAKE CHINA GREAT")
 	}
@@ -95,9 +95,10 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			return
 		}
 
-		ngReg, _ := regexp.Compile("^!ng ")
+		ngReg, _ := regexp.Compile("^!addng ")
 		rmngReg, _ := regexp.Compile("^!rmng ")
 		showReg, _ := regexp.Compile("^!showng")
+		verReg, _ := regexp.Compile("^!version")
 
 		if showReg.MatchString(m.Content) {
 			ngWords, err := dbService.SelectAllNgs()
@@ -126,6 +127,14 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			}
 		}
 
+		if verReg.MatchString(m.Content) {
+			ver := dbService.GetCurrentVersion()
+			if ver == "" {
+				ver = "0.0.0"
+			}
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在のバージョンは `v%s` です🇨🇳", ver))
+		}
+
 		if ngReg.MatchString(m.Content) {
 			if m.Author.ID != adminID {
 				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
@@ -133,7 +142,7 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			}
 			var str string
 			add := ""
-			fmt.Sscanf(m.Content, "!ng %s %s", &str, &add)
+			fmt.Sscanf(m.Content, "!addng %s %s", &str, &add)
 			if strings.Contains(str, ",") || add != "" {
 				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
 				return

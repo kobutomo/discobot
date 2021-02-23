@@ -151,6 +151,19 @@ func (dbService *DbService) SelectAllVersions() []string {
 	return result
 }
 
+// GetCurrentVersion - 今のバージョンを取得
+func (dbService *DbService) GetCurrentVersion() string {
+	result := ""
+	res := dbService.db.QueryRow(
+		`SELECT version FROM versions WHERE id = (SELECT max(id) FROM versions)`,
+	)
+	err := res.Scan(&result)
+	if err != nil {
+		log.Println(err)
+	}
+	return result
+}
+
 // Close - セッションを閉じる
 func (dbService *DbService) Close() error {
 	return dbService.db.Close()
