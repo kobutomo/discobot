@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
-      - name: setup node
+      - name: setup go
         uses: actions/setup-go@v1
         with:
           go-version: 1.16
