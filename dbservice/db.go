@@ -2,6 +2,8 @@ package dbservice
 
 import (
 	"database/sql"
+	"log"
+
 	// Sqlite3 driver
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -31,6 +33,16 @@ func (dbService *DbService) Init() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			word VARCHAR(100),
 			UNIQUE(word)
+		)`,
+	)
+	if err != nil {
+		return err
+	}
+	_, err = dbService.db.Exec(
+		`CREATE TABLE IF NOT EXISTS versions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			version VARCHAR(100),
+			UNIQUE(version)
 		)`,
 	)
 	if err != nil {
@@ -91,14 +103,52 @@ func (dbService *DbService) DeleteNg(word string) error {
 }
 
 // FindByWord - ワードが登録されているかどうかを調べる
-func (dbService *DbService) FindByWord(word string) (string, error) {
+func (dbService *DbService) FindByWord(word string) string {
 	result := ""
 	row := dbService.db.QueryRow(
 		`SELECT word FROM ng_words WHERE word = ?`,
 		word,
 	)
 	err := row.Scan(&result)
-	return result, err
+	if err != nil {
+		log.Println(err)
+	}
+	return result
+}
+
+// InsertNewVersion - バージョンを追加する
+func (dbService *DbService) InsertNewVersion(version string) (int64, error) {
+	res, err := dbService.db.Exec(
+		`INSERT INTO versions (version) VALUES (?)`,
+		version,
+	)
+	id, err := res.LastInsertId()
+	if err != nil {
+		return -1, err
+	}
+	return id, err
+}
+
+// SelectAllVersions - 今までのバージョンを取得
+func (dbService *DbService) SelectAllVersions() []string {
+	var result []string
+	var version string
+	res, err := dbService.db.Query(
+		`SELECT version FROM versions`,
+	)
+	if err != nil {
+		log.Println(err)
+		return result
+	}
+	for res.Next() {
+		err := res.Scan(&version)
+		if err != nil {
+			log.Println(err)
+		} else {
+			result = append(result, version)
+		}
+	}
+	return result
 }
 
 // Close - セッションを閉じる

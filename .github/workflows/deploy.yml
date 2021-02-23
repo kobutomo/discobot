@@ -1,8 +1,8 @@
 name: deploy lightsail
 on:
   push:
-    branches:
-      - master
+    tags:
+      - v**
 
 jobs:
   build-deploy:
@@ -14,7 +14,11 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.16
-      - run: go build -o $GITHUB_WORKSPACE/bin/discobot;
+
+      - name: build app
+        run: go build -ldflags="-X main.version=$VERSION -o $GITHUB_WORKSPACE/bin/discobot;
+        env: 
+          VERSION: echo ${{ github.ref }} | sed -e "s#refs/tags/v##g"
 
       - name: ssh key generate
         run: echo "$SSH_KEY" > key && chmod 600 key

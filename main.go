@@ -21,6 +21,7 @@ var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtu
 var ngWords []string
 var adminID string
 var mainChannelID string
+var version string
 
 func main() {
 	println(os.Getenv("GO_ENV"))
@@ -53,7 +54,7 @@ func main() {
 		return
 	}
 
-	dg.AddHandler(ready)
+	dg.AddHandler(ready(dbService))
 	dg.AddHandler(generateMessegaCreate(dbService))
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
@@ -70,10 +71,22 @@ func main() {
 	dg.Close()
 }
 
-func ready(s *discordgo.Session, event *discordgo.Ready) {
-	log.Println("習近平 starts to inspect.")
-	s.ChannelMessageSend(mainChannelID, "新しいバージョンがリリースされました👮‍♂️")
-	s.UpdateStatus(0, "MAKE CHINA GREAT")
+func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *discordgo.Ready) {
+	return func(s *discordgo.Session, event *discordgo.Ready) {
+		log.Println("習近平 starts to inspect." + version)
+		versions := dbService.SelectAllVersions()
+		isNew := true
+		for _, v := range versions {
+			if v == version {
+				isNew = false
+			}
+		}
+		if isNew {
+			s.ChannelMessageSend(mainChannelID, fmt.Sprintf("習近平 `v%s` がリリースされました🇨🇳", version))
+			// dbService.InsertNewVersion(version)
+		}
+		s.UpdateStatus(0, "MAKE CHINA GREAT")
+	}
 }
 
 func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -156,10 +169,7 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 }
 
 func alreadyAddedNG(dbService *dbservice.DbService, str string) bool {
-	res, err := dbService.FindByWord(str)
-	if err != nil {
-		log.Println(err)
-	}
+	res := dbService.FindByWord(str)
 	return res != ""
 }
 
