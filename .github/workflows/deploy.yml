@@ -16,9 +16,9 @@ jobs:
           go-version: 1.16
 
       - name: build app
-        run: go build -ldflags="-X main.version=$VERSION -o $GITHUB_WORKSPACE/bin/discobot;
-        env: 
-          VERSION: echo ${{ github.ref }} | sed -e "s#refs/tags/v##g"
+        run: |
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/v##g")
+          go build -ldflags="-X main.version=$VERSION -o $GITHUB_WORKSPACE/bin/discobot
 
       - name: ssh key generate
         run: echo "$SSH_KEY" > key && chmod 600 key
