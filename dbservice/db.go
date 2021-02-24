@@ -151,6 +151,20 @@ func (dbService *DbService) SelectAllVersions() []string {
 	return result
 }
 
+// FindVersion - バージョンが登録されているかどうかを調べる
+func (dbService *DbService) FindVersion(version string) string {
+	result := ""
+	row := dbService.db.QueryRow(
+		`SELECT version FROM versions WHERE word = ?`,
+		version,
+	)
+	err := row.Scan(&result)
+	if err != nil {
+		log.Println(err)
+	}
+	return result
+}
+
 // GetCurrentVersion - 今のバージョンを取得
 func (dbService *DbService) GetCurrentVersion() string {
 	result := ""

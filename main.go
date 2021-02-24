@@ -74,14 +74,8 @@ func main() {
 func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *discordgo.Ready) {
 	return func(s *discordgo.Session, event *discordgo.Ready) {
 		log.Println("習近平 starts to inspect. v" + version)
-		versions := dbService.SelectAllVersions()
-		isNew := true
-		for _, v := range versions {
-			if v == version {
-				isNew = false
-			}
-		}
-		if isNew {
+		version := dbService.FindVersion(version)
+		if version == "" {
 			s.ChannelMessageSend(mainChannelID, fmt.Sprintf("習近平 `v%s` がリリースされました🇨🇳", version))
 			dbService.InsertNewVersion(version)
 		}
