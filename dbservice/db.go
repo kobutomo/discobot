@@ -155,7 +155,7 @@ func (dbService *DbService) SelectAllVersions() []string {
 func (dbService *DbService) FindVersion(version string) string {
 	result := ""
 	row := dbService.db.QueryRow(
-		`SELECT version FROM versions WHERE word = ?`,
+		`SELECT version FROM versions WHERE version = ?`,
 		version,
 	)
 	err := row.Scan(&result)
