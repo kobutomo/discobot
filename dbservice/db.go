@@ -117,16 +117,14 @@ func (dbService *DbService) FindByWord(word string) string {
 }
 
 // InsertNewVersion - バージョンを追加する
-func (dbService *DbService) InsertNewVersion(version string) (int64, error) {
-	res, err := dbService.db.Exec(
+func (dbService *DbService) InsertNewVersion(version string) {
+	_, err := dbService.db.Exec(
 		`INSERT INTO versions (version) VALUES (?)`,
 		version,
 	)
-	id, err := res.LastInsertId()
 	if err != nil {
-		return -1, err
+		log.Println(err)
 	}
-	return id, err
 }
 
 // SelectAllVersions - 今までのバージョンを取得
@@ -160,6 +158,9 @@ func (dbService *DbService) FindVersion(version string) string {
 	)
 	err := row.Scan(&result)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return result
+		}
 		log.Println(err)
 	}
 	return result
