@@ -122,8 +122,9 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 				log.Println(err)
 				return
 			}
-			if containsNGWords(dbService, html) {
-				s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+" ピピーッ！👮‍♂️バーチャルYouTuberを検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️")
+			contain, word := containsNGWords(dbService, html)
+			if contain {
+				s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+fmt.Sprintf(" ピピーッ！👮‍♂️NGワード`%s`を検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️", word))
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
@@ -198,17 +199,17 @@ func getHTMLStr(url string) (string, error) {
 	return html, nil
 }
 
-func containsNGWords(dbService *dbservice.DbService, str string) bool {
+func containsNGWords(dbService *dbservice.DbService, str string) (bool, string) {
 	res, err := dbService.SelectAllNgs()
 	if err != nil {
 		log.Fatalln(err)
 	}
 	for _, word := range res {
 		if strings.Contains(str, word) {
-			return true
+			return true, word
 		}
 	}
-	return false
+	return false, ""
 }
 
 func addNG(dbService *dbservice.DbService, word string) {
