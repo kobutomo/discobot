@@ -124,7 +124,7 @@ func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			}
 			contain, word := containsNGWords(dbService, html)
 			if contain {
-				s.ChannelMessageSend(m.ChannelID, m.Author.Mention()+fmt.Sprintf(" ピピーッ！👮‍♂️NGワード`%s`を検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️", word))
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s ピピーッ！👮‍♂️NGワード `%s` を検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️", m.Author.Mention(), word))
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
