@@ -18,11 +18,11 @@ import (
 	"github.com/kobutomo/discobot/dbservice"
 )
 
-var initialNGWords = "戌神ころね,リゼ・ヘルエスタ,Vtuber,VTuber,vtuber,バーチャルユーチューバー,バーチャルYouTuber,笹木咲,戌亥とこ"
-var ngWords []string
-var adminID string
-var mainChannelID string
-var version string
+var (
+	adminID       string
+	mainChannelID string
+	version       string
+)
 
 func main() {
 	// logging の設定
