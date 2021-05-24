@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -23,11 +24,17 @@ type Contents struct {
 	desc  string
 }
 
+type CrawlerMutex struct {
+	sync.Mutex
+	isLocked bool
+}
+
 var (
 	adminID       string
 	mainChannelID string
-	version       string
+	cm            CrawlerMutex
 )
+var version string
 
 func main() {
 	// logging の設定
@@ -60,9 +67,6 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
-
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
 		log.Fatalln("Cannot create Discord session,", err)
@@ -70,7 +74,7 @@ func main() {
 	}
 
 	dg.AddHandler(ready(dbService))
-	dg.AddHandler(generateMessageCreate(dbService, ctx))
+	dg.AddHandler(generateMessageCreate(dbService))
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
@@ -98,7 +102,7 @@ func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *dis
 	}
 }
 
-func generateMessageCreate(dbService *dbservice.DbService, ctx context.Context) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
@@ -125,7 +129,16 @@ func generateMessageCreate(dbService *dbservice.DbService, ctx context.Context) 
 		}
 
 		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
-			contents, err := getDocument(m.Content, ctx)
+			if cm.isLocked {
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️忙しいので後にしてください！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
+				return
+			}
+			cm.Lock()
+			cm.isLocked = true
+			contents, err := getDocument(m.Content)
+			cm.isLocked = false
+			cm.Unlock()
 			if err != nil {
 				log.Println(err)
 				return
@@ -192,8 +205,11 @@ func alreadyAddedNG(dbService *dbservice.DbService, str string) bool {
 	return res != ""
 }
 
-func getDocument(url string, ctx context.Context) (*Contents, error) {
+func getDocument(url string) (*Contents, error) {
 	var title, tag, desc string
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
 	var bool bool
 	if err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
