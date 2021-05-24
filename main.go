@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
@@ -14,9 +12,16 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/chromedp/chromedp"
 	"github.com/joho/godotenv"
 	"github.com/kobutomo/discobot/dbservice"
 )
+
+type Contents struct {
+	title string
+	tag   string
+	desc  string
+}
 
 var (
 	adminID       string
@@ -55,6 +60,9 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
 		log.Fatalln("Cannot create Discord session,", err)
@@ -62,7 +70,7 @@ func main() {
 	}
 
 	dg.AddHandler(ready(dbService))
-	dg.AddHandler(generateMessageCreate(dbService))
+	dg.AddHandler(generateMessageCreate(dbService, ctx))
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
@@ -90,7 +98,7 @@ func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *dis
 	}
 }
 
-func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func generateMessageCreate(dbService *dbservice.DbService, ctx context.Context) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
@@ -117,12 +125,12 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 		}
 
 		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
-			html, err := getHTMLStr(m.Content)
+			contents, err := getDocument(m.Content, ctx)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			contain, word := containsNGWords(dbService, html)
+			contain, word := containsNGWords(dbService, contents)
 			if contain {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s ピピーッ！👮‍♂️NGワード `%s` を検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️", m.Author.Mention(), word))
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
@@ -184,28 +192,33 @@ func alreadyAddedNG(dbService *dbservice.DbService, str string) bool {
 	return res != ""
 }
 
-func getHTMLStr(url string) (string, error) {
-	res, err := http.Get(url)
-	if err != nil {
-		return "", err
+func getDocument(url string, ctx context.Context) (*Contents, error) {
+	var title, tag, desc string
+	var bool bool
+	if err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.TextContent("//title", &title),
+		chromedp.TextContent("//*[@id='description']", &desc),
+		chromedp.AttributeValue("/html/head/meta[@name='keywords']", "content", &tag, &bool),
+	); err != nil {
+		return nil, err
 	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
+	var contents = Contents{
+		title: title,
+		tag:   tag,
+		desc:  desc,
 	}
-	defer res.Body.Close()
-	buf := bytes.NewBuffer(body)
-	html := buf.String()
-	return html, nil
+	return &contents, nil
 }
 
-func containsNGWords(dbService *dbservice.DbService, str string) (bool, string) {
+func containsNGWords(dbService *dbservice.DbService, contents *Contents) (bool, string) {
 	res, err := dbService.SelectAllNgs()
 	if err != nil {
 		log.Fatalln(err)
 	}
+	s := contents.desc + contents.tag + contents.title
 	for _, word := range res {
-		if strings.Contains(str, word) {
+		if strings.Contains(s, word) {
 			return true, word
 		}
 	}
