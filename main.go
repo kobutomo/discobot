@@ -62,7 +62,7 @@ func main() {
 	}
 
 	dg.AddHandler(ready(dbService))
-	dg.AddHandler(generateMessegaCreate(dbService))
+	dg.AddHandler(generateMessageCreate(dbService))
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
@@ -90,7 +90,7 @@ func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *dis
 	}
 }
 
-func generateMessegaCreate(dbService *dbservice.DbService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
+func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Session, m *discordgo.MessageCreate) {
 	return func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
