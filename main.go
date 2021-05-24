@@ -33,8 +33,8 @@ var (
 	adminID       string
 	mainChannelID string
 	cm            CrawlerMutex
+	version       string
 )
-var version string
 
 func main() {
 	// logging の設定
