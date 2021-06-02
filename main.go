@@ -92,13 +92,13 @@ func main() {
 
 func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *discordgo.Ready) {
 	return func(s *discordgo.Session, event *discordgo.Ready) {
-		log.Println("習近平 starts to inspect. v" + version)
+		log.Println("Starts to inspect. v" + version)
 		v := dbService.FindVersion(version)
 		if v == "" {
-			s.ChannelMessageSend(mainChannelID, fmt.Sprintf("習近平 `v%s` がリリースされました🇨🇳", version))
+			s.ChannelMessageSend(mainChannelID, fmt.Sprintf("`v%s` がリリースされました", version))
 			dbService.InsertNewVersion(version)
 		}
-		s.UpdateStatus(0, "MAKE CHINA GREAT")
+		s.UpdateStatus(0, "MAKE JORUJIO GREAT AGAIN")
 	}
 }
 
@@ -155,7 +155,7 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			if ver == "" {
 				ver = "0.0.0"
 			}
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在のバージョンは `v%s` です🇨🇳", ver))
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在のバージョンは `v%s` です", ver))
 		}
 
 		if ngReg.MatchString(m.Content) {
