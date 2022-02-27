@@ -84,7 +84,7 @@ func main() {
 	}
 
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 
 	dg.Close()
@@ -98,7 +98,7 @@ func ready(dbService *dbservice.DbService) func(s *discordgo.Session, event *dis
 			s.ChannelMessageSend(mainChannelID, fmt.Sprintf("`v%s` がリリースされました", version))
 			dbService.InsertNewVersion(version)
 		}
-		s.UpdateStatus(0, "MAKE JORUJIO GREAT AGAIN")
+		s.UpdateGameStatus(0, "MAKE JORUJIO GREAT AGAIN")
 	}
 }
 
@@ -112,6 +112,7 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 		rmngReg, _ := regexp.Compile("^!rmng ")
 		showReg, _ := regexp.Compile("^!showng")
 		verReg, _ := regexp.Compile("^!version")
+		urlReg, _ := regexp.Compile("https?://")
 
 		if showReg.MatchString(m.Content) {
 			ngWords, err := dbService.SelectAllNgs()
@@ -128,9 +129,9 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("現在設定されているNGワードは\n```\n%s\n```です", str))
 		}
 
-		if strings.Contains(m.Content, "youtube.com") || strings.Contains(m.Content, "youtu.be") {
+		if urlReg.MatchString(m.Content) {
 			if cm.isLocked {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️忙しいので後にしてください！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46E忙しいので後にしてください！\U0001F645\U0001F645\U0001F645")
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 				return
 			}
@@ -145,7 +146,7 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 			}
 			contain, word := containsNGWords(dbService, contents)
 			if contain {
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s ピピーッ！👮‍♂️NGワード `%s` を検出しました！削除します！🙅‍♂️🙅‍♂️🙅‍♂️", m.Author.Mention(), word))
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s ピピーッ！\U0001F46ENGワード `%s` を検出しました！削除します！\U0001F645\U0001F645\U0001F645", m.Author.Mention(), word))
 				s.ChannelMessageDelete(m.ChannelID, m.Message.ID)
 			}
 		}
@@ -160,18 +161,18 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 
 		if ngReg.MatchString(m.Content) {
 			if m.Author.ID != adminID {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46E権限がありません！\U0001F645\U0001F645\U0001F645")
 				return
 			}
 			var str string
 			add := ""
 			fmt.Sscanf(m.Content, "!addng %s %s", &str, &add)
 			if strings.Contains(str, ",") || add != "" {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46Eフォーマット違反です！\U0001F645\U0001F645\U0001F645")
 				return
 			}
 			if alreadyAddedNG(dbService, str) {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️既に追加されているNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46E既に追加されているNGワードです！\U0001F645\U0001F645\U0001F645")
 				return
 			}
 			addNG(dbService, str)
@@ -180,18 +181,18 @@ func generateMessageCreate(dbService *dbservice.DbService) func(s *discordgo.Ses
 
 		if rmngReg.MatchString(m.Content) {
 			if m.Author.ID != adminID {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️権限がありません！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46E権限がありません！\U0001F645\U0001F645\U0001F645")
 				return
 			}
 			var str string
 			add := ""
 			fmt.Sscanf(m.Content, "!rmng %s %s", &str, &add)
 			if strings.Contains(str, ",") || add != "" {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️フォーマット違反です！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46Eフォーマット違反です！\U0001F645\U0001F645\U0001F645")
 				return
 			}
 			if !alreadyAddedNG(dbService, str) {
-				s.ChannelMessageSend(m.ChannelID, "ピピーッ！👮‍♂️存在しないNGワードです！🙅‍♂️🙅‍♂️🙅‍♂️")
+				s.ChannelMessageSend(m.ChannelID, "ピピーッ！\U0001F46E存在しないNGワードです！\U0001F645\U0001F645\U0001F645")
 				return
 			}
 			removeNG(dbService, str)
