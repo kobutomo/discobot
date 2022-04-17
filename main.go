@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
 	"github.com/joho/godotenv"
 	"github.com/kobutomo/discobot/dbservice"
@@ -212,12 +213,35 @@ func getDocument(url string) (*Contents, error) {
 	defer cancel()
 
 	var bool bool
-	if err := chromedp.Run(ctx,
+	log.Println("checking start url:", url)
+	err := chromedp.Run(ctx,
 		chromedp.Navigate(url),
-		chromedp.TextContent("//title", &title),
-		chromedp.TextContent("//*[@id='description']", &desc),
-		chromedp.AttributeValue("/html/head/meta[@name='keywords']", "content", &tag, &bool),
-	); err != nil {
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			if err := chromedp.TextContent("//title", &title).Do(ctx); err != nil {
+				return err
+			}
+			var descnodes []*cdp.Node
+			var kwnodes []*cdp.Node
+			if err := chromedp.Nodes("//*[@id='description']", &descnodes, chromedp.AtLeast(0)).Do(ctx); err != nil {
+				return err
+			}
+			if err := chromedp.Nodes("/html/head/meta[@name='keywords']", &kwnodes, chromedp.AtLeast(0)).Do(ctx); err != nil {
+				return err
+			}
+			if len(descnodes) == 0 || len(kwnodes) == 0 {
+				return nil
+			}
+			if err := chromedp.TextContent("//*[@id='description']", &desc).Do(ctx); err != nil {
+				return err
+			}
+			if err := chromedp.AttributeValue("/html/head/meta[@name='keywords']", "content", &tag, &bool).Do(ctx); err != nil {
+				return err
+			}
+			return nil
+		}),
+	)
+	log.Println("checking end")
+	if err != nil {
 		return nil, err
 	}
 	var contents = Contents{
